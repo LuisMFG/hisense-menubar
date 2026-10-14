@@ -14,6 +14,9 @@ struct ArCondicionadoApp: App {
                 if !store.menuBarTitle.isEmpty {
                     Text(store.menuBarTitle).monospacedDigit()
                 }
+                if store.timerActive {
+                    Image(systemName: "timer")
+                }
             }
         }
         .menuBarExtraStyle(.window)

@@ -1,6 +1,8 @@
 import Foundation
 import Security
 import SwiftUI
+import UserNotifications
+import AppKit
 
 // Valores de t_work_mode / t_fan_speed (nomes de propriedade confirmados pelo REA no libapp.so)
 enum Mode: Int, CaseIterable {
@@ -54,6 +56,14 @@ final class ACStore: ObservableObject {
     private var pollTask: Task<Void, Never>?
     private var pendingTemp: Task<Void, Never>?
 
+    // Timer de desligamento (local: roda no Mac, persiste entre reinícios)
+    @Published private(set) var offAt: Date?
+    @Published private(set) var timerStart: Date?
+    private var timerDeviceId: String?
+    private var timerTask: Task<Void, Never>?
+    private var sleepBlocker: NSObjectProtocol?
+    private var wakeObserver: NSObjectProtocol?
+    private var isPreview = false
 
     let minTemp = 16, maxTemp = 32
 
@@ -63,6 +73,7 @@ final class ACStore: ObservableObject {
         devices = [Appliance(id: "preview", puid: "preview", name: "Split", room: "Quarto",
                              typeCode: "009", featureCode: "", offline: false, status: status)]
         lastUpdate = Date()
+        isPreview = true
     }
 
     init() {
@@ -70,6 +81,11 @@ final class ACStore: ObservableObject {
             api = ConnectLifeAPI(email: creds.email, password: creds.password)
             loggedIn = true
             startPolling()
+        }
+        restoreTimer()
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.checkTimer() }
         }
     }
 
@@ -119,6 +135,10 @@ final class ACStore: ObservableObject {
             if selectedId == nil { selectedId = devices.first?.id }
             lastUpdate = Date()
             error = nil
+            if offAt != nil, let id = timerDeviceId,
+               devices.first(where: { $0.id == id })?.status["t_power"] == 0 {
+                cancelTimer() // desligaram por outro lugar
+            }
         } catch {
             self.error = error.localizedDescription
         }
@@ -136,7 +156,10 @@ final class ACStore: ObservableObject {
 
     // MARK: - Comandos (otimistas)
 
-    func togglePower() { send(["t_power": isOn ? 0 : 1]) }
+    func togglePower() {
+        if isOn && offAt != nil { cancelTimer() }
+        send(["t_power": isOn ? 0 : 1])
+    }
     func setMode(_ m: Mode) { if m != mode { send(["t_work_mode": m.rawValue]) } }
     func setFan(_ f: FanSpeed) { if f != fan { send(["t_fan_speed": f.rawValue]) } }
 
@@ -178,6 +201,118 @@ final class ACStore: ObservableObject {
             self.error = error.localizedDescription
             await refresh() // desfaz o otimismo
         }
+    }
+}
+
+// MARK: - Timer
+
+extension ACStore {
+    private enum Keys {
+        static let offAt = "timer.offAt", start = "timer.start", device = "timer.device"
+    }
+
+    var timerActive: Bool { offAt != nil }
+
+    /// 0…1 de quanto do timer já passou
+    func timerProgress(at now: Date) -> Double {
+        guard let offAt, let timerStart else { return 0 }
+        let total = offAt.timeIntervalSince(timerStart)
+        return total > 0 ? min(max(now.timeIntervalSince(timerStart) / total, 0), 1) : 1
+    }
+
+    func startTimer(minutes: Int) {
+        guard let d = device else { return }
+        let now = Date()
+        timerStart = now
+        offAt = now.addingTimeInterval(TimeInterval(minutes * 60))
+        timerDeviceId = d.id
+        persistTimer()
+        armTimer()
+        if !isPreview {
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        }
+    }
+
+    /// Adia o desligamento sem zerar o progresso.
+    func extendTimer(minutes: Int) {
+        guard let at = offAt else { return startTimer(minutes: minutes) }
+        offAt = max(at, Date()).addingTimeInterval(TimeInterval(minutes * 60))
+        persistTimer()
+    }
+
+    func cancelTimer() {
+        offAt = nil; timerStart = nil; timerDeviceId = nil
+        timerTask?.cancel(); timerTask = nil
+        persistTimer()
+        allowSleep()
+    }
+
+    fileprivate func restoreTimer() {
+        let ud = UserDefaults.standard
+        guard let at = ud.object(forKey: Keys.offAt) as? Date else { return }
+        offAt = at
+        timerStart = ud.object(forKey: Keys.start) as? Date ?? at
+        timerDeviceId = ud.string(forKey: Keys.device)
+        armTimer()
+    }
+
+    private func persistTimer() {
+        guard !isPreview else { return }
+        let ud = UserDefaults.standard
+        ud.set(offAt, forKey: Keys.offAt)
+        ud.set(timerStart, forKey: Keys.start)
+        ud.set(timerDeviceId, forKey: Keys.device)
+    }
+
+    private func armTimer() {
+        timerTask?.cancel()
+        preventSleep()
+        // checa a cada 15 s em vez de um único sleep longo: sobrevive a o Mac dormir/acordar
+        timerTask = Task { [weak self] in
+            while !Task.isCancelled {
+                await self?.checkTimer()
+                try? await Task.sleep(for: .seconds(15))
+            }
+        }
+    }
+
+    fileprivate func checkTimer() {
+        guard let offAt, Date() >= offAt else { return }
+        let id = timerDeviceId
+        cancelTimer()
+        guard !isPreview, let api,
+              let target = devices.first(where: { $0.id == id }) ?? device else { return }
+        if let idx = devices.firstIndex(where: { $0.id == target.id }) {
+            devices[idx].status["t_power"] = 0
+        }
+        Task {
+            do {
+                try await api.set(puid: target.puid, properties: ["t_power": 0])
+                notify("Ar desligado pelo timer", "\(target.room.isEmpty ? target.name : target.room) foi desligado.")
+            } catch {
+                self.error = error.localizedDescription
+                notify("Falha no timer", "Não consegui desligar o ar: \(error.localizedDescription)")
+            }
+            await refresh()
+        }
+    }
+
+    private func notify(_ title: String, _ body: String) {
+        let c = UNMutableNotificationContent()
+        c.title = title; c.body = body; c.sound = .default
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil))
+    }
+
+    /// Impede o Mac de dormir por inatividade enquanto o timer está ativo.
+    private func preventSleep() {
+        guard sleepBlocker == nil, !isPreview else { return }
+        sleepBlocker = ProcessInfo.processInfo.beginActivity(
+            options: [.idleSystemSleepDisabled], reason: "Timer do ar-condicionado")
+    }
+
+    private func allowSleep() {
+        if let b = sleepBlocker { ProcessInfo.processInfo.endActivity(b) }
+        sleepBlocker = nil
     }
 }
 

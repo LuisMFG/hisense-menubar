@@ -120,6 +120,7 @@ struct ControlView: View {
                     ModePicker(selected: store.mode, on: store.isOn, onSelect: store.setMode)
                     FanMeter(selected: store.fan, on: store.isOn, tint: tint, onSelect: store.setFan)
                     extras
+                    TimerRow(tint: tint)
                 }
                 .disabled(!store.isOn)
                 .opacity(store.isOn ? 1 : 0.4)
@@ -474,6 +475,108 @@ private struct FanMeter: View {
         .padding(.horizontal, 12)
         .frame(height: 44)
         .background(RoundedRectangle(cornerRadius: 13).fill(.white.opacity(0.05)))
+    }
+}
+
+// MARK: - Timer de desligamento
+
+private struct TimerRow: View {
+    @EnvironmentObject var store: ACStore
+    let tint: Color
+
+    private let presets: [(min: Int, label: String)] = [(30, "30m"), (60, "1h"), (120, "2h"), (240, "4h"), (480, "8h")]
+
+    var body: some View {
+        Group {
+            if let offAt = store.offAt {
+                active(offAt)
+                    .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity),
+                                            removal: .opacity))
+            } else {
+                picker.transition(.opacity)
+            }
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 44)
+        .background(RoundedRectangle(cornerRadius: 13).fill(.white.opacity(0.05)))
+        .animation(.snappy, value: store.offAt)
+    }
+
+    private var picker: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "timer")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 18)
+            Text("Desligar em")
+                .font(.system(size: 10.5, weight: .medium))
+                .foregroundStyle(.secondary)
+                .fixedSize()
+            Spacer(minLength: 2)
+            ForEach(presets, id: \.min) { p in
+                Button { store.startTimer(minutes: p.min) } label: {
+                    Text(p.label)
+                        .font(.system(size: 10.5, weight: .semibold))
+                        .monospacedDigit()
+                        .frame(width: 29, height: 24)
+                        .background(Capsule().fill(.white.opacity(0.08)))
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .help("Desligar o ar daqui a \(p.label)")
+            }
+        }
+    }
+
+    private func active(_ offAt: Date) -> some View {
+        TimelineView(.periodic(from: .now, by: 1)) { ctx in
+            HStack(spacing: 10) {
+                ZStack {
+                    Circle().stroke(.white.opacity(0.1), lineWidth: 2.5)
+                    Circle()
+                        .trim(from: 0, to: 1 - store.timerProgress(at: ctx.date))
+                        .stroke(tint, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    Image(systemName: "moon.zzz.fill")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(tint)
+                }
+                .frame(width: 24, height: 24)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(remaining(until: offAt, now: ctx.date))
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .contentTransition(.numericText(countsDown: true))
+                    Text("Desliga às \(offAt.formatted(date: .omitted, time: .shortened))")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button { store.extendTimer(minutes: 30) } label: {
+                    Text("+30m")
+                        .font(.system(size: 10.5, weight: .semibold))
+                        .padding(.horizontal, 8).frame(height: 24)
+                        .background(Capsule().fill(.white.opacity(0.08)))
+                }
+                .buttonStyle(.plain)
+                .help("Adiar 30 minutos")
+                Button(action: store.cancelTimer) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .frame(width: 24, height: 24)
+                        .background(Circle().fill(.white.opacity(0.08)))
+                }
+                .buttonStyle(.plain)
+                .help("Cancelar timer")
+            }
+        }
+    }
+
+    private func remaining(until offAt: Date, now: Date) -> String {
+        let s = max(Int(offAt.timeIntervalSince(now).rounded(.up)), 0)
+        let h = s / 3600, m = (s % 3600) / 60, sec = s % 60
+        return h > 0 ? String(format: "%d:%02d:%02d", h, m, sec) : String(format: "%d:%02d", m, sec)
     }
 }
 
