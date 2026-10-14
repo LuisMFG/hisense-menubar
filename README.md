@@ -2,37 +2,40 @@
 
 # Hisense Menubar
 
-**Controle seu ar-condicionado Hisense (ConnectLife) direto da barra de menus do Mac.**
+**English** · [Português](README.pt-BR.md)
 
-Sem procurar o controle remoto, sem pegar o celular.
+**Control your Hisense (ConnectLife) air conditioner from the Mac menu bar.**
+
+No more hunting for the remote or reaching for your phone.
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-5.10-F05138?logo=swift&logoColor=white)
 ![SwiftUI + Metal](https://img.shields.io/badge/SwiftUI-Metal-0A84FF)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
 
-<img src="docs/hero.png" alt="Painel em modo frio, calor com timer e desumidificar" width="100%">
+<img src="docs/hero.png" alt="Panel in cool mode, heat mode with an active timer, and dry mode" width="100%">
 
 </div>
 
-## O que faz
+## Features
 
-- **Temperatura na barra de menus**: `23°` quando está ligado, `off` quando está desligado e um ícone de timer quando há desligamento agendado.
-- **Dial de termostato**: arraste o anel, use os botões `−`/`+` ou as setas `↑`/`↓`. O trackpad vibra a cada grau.
-- **Split animado**: a aleta abre ao ligar e o fluxo de ar (um shader Metal) desce até o dial, com a cor do modo e a força da ventilação.
-- **Modos**: Frio, Calor, Seco, Vento e Auto, cada um com sua cor. O ícone do modo ativo "respira".
-- **Ventilação**: medidor de barras com Auto e 5 velocidades. O ícone do ventilador gira na velocidade escolhida.
-- **Funções extras**: Turbo, Swing, Eco e Sono. Só aparecem as que o seu modelo informa ter.
-- **Timer de desligamento**: 30m, 1h, 2h, 4h ou 8h, com contagem regressiva, `+30m` para adiar e notificação ao desligar.
-- **Leve e nativo**: app SwiftUI de ~1 MB que não aparece no Dock e guarda a senha só no Keychain.
+- **Temperature in the menu bar**: shows `23°` when the AC is on, `off` when it's off, and a timer icon while a shutdown is scheduled.
+- **Thermostat dial**: drag the ring, click `−`/`+` or press `↑`/`↓`. The trackpad gives a haptic tick on every degree.
+- **Animated split unit**: the louver opens when the AC turns on, and a Metal shader draws the airflow down into the dial in the mode's color, as strong as the fan setting.
+- **Modes**: Cool, Heat, Dry, Fan and Auto, each with its own color. The active mode's icon "breathes".
+- **Fan speed**: a bar meter with Auto plus 5 speeds. The fan icon spins at the selected speed.
+- **Extras**: Turbo, Swing, Eco and Sleep. Each one only shows up if your unit reports it.
+- **Auto-off timer**: 30m, 1h, 2h, 4h or 8h, with a countdown, `+30m` to postpone and a notification when it fires.
+- **Light and native**: a ~1 MB SwiftUI app with no Dock icon. Your password is stored only in the Keychain.
+- **English and Portuguese**: the app follows your system language.
 
-| Desligado | Timer ativo |
+| Off | Timer running |
 |:---:|:---:|
 | <img src="docs/off.png" width="340"> | <img src="docs/heat.png" width="340"> |
 
-## Instalação
+## Install
 
-Requisitos: macOS 14 ou mais novo e as Command Line Tools do Xcode (`xcode-select --install`). O Xcode completo não é necessário.
+Requirements: macOS 14 or later and the Xcode Command Line Tools (`xcode-select --install`). You don't need the full Xcode.
 
 ```bash
 git clone https://github.com/LuisMFG/hisense-menubar.git
@@ -42,75 +45,76 @@ cp -R "build/Ar Condicionado.app" /Applications/
 open "/Applications/Ar Condicionado.app"
 ```
 
-Clique no ícone do ar-condicionado na barra de menus e entre com o **mesmo e-mail e senha do app ConnectLife**.
+Click the air conditioner icon in the menu bar and sign in with **the same email and password you use in the ConnectLife app**.
 
-Para abrir junto com o Mac, adicione o app em **Ajustes do Sistema → Geral → Itens de Início**.
+To launch it at login, add the app under **System Settings → General → Login Items**.
 
-### Atalhos (com o painel aberto)
+### Shortcuts (while the panel is open)
 
-| Tecla | Ação |
+| Key | Action |
 |---|---|
-| `Espaço` | Liga/desliga |
+| `Space` | Turn on/off |
 | `↑` / `↓` | +1° / −1° |
-| `⌘R` | Atualizar status |
-| `⌘Q` | Fechar o app |
+| `⌘R` | Refresh status |
+| `⌘Q` | Quit |
 
-## Como funciona
+## How it works
 
-A Hisense não publica uma API. O app conversa com a mesma nuvem que o app oficial ConnectLife usa:
+Hisense doesn't publish an API. The app talks to the same cloud the official ConnectLife app uses:
 
 ```
-Gigya (CDC)          OAuth hijuconn            Gateway clife-eu
+Gigya (CDC)          hijuconn OAuth            clife-eu gateway
 accounts.login  ──▶  /oauth/authorize    ──▶  /clife-svc/pu/get_device_status_list
 accounts.getJWT      /oauth/token              /device/pu/property/set
-                                               └─ cada requisição é assinada:
-                                                  sign = RSA_PKCS1(SHA256(params ordenados + sufixo))
+                                               └─ every request is signed:
+                                                  sign = RSA_PKCS1(SHA256(sorted params + suffix))
 ```
 
-O status chega como propriedades (`t_power`, `t_temp`, `t_work_mode`, `t_fan_speed`, `f_temp_in`…). Os comandos mudam essas mesmas propriedades. O painel atualiza na hora (de forma otimista) e confirma com a nuvem a cada 60 s.
+The unit's state comes back as properties (`t_power`, `t_temp`, `t_work_mode`, `t_fan_speed`, `f_temp_in`…), and commands set those same properties. The panel updates right away (optimistically) and syncs with the cloud every 60 s.
 
-## Engenharia reversa com REA
+## Reverse engineering with REA
 
-O protocolo foi verificado contra o app oficial **ConnectLife 2.17.2 (Android)** usando o [REA](https://github.com/morluto/rea), um MCP/CLI de engenharia reversa para agentes:
+I checked the protocol against the official **ConnectLife 2.17.2 (Android)** app with [REA](https://github.com/morluto/rea), a reverse-engineering MCP/CLI for coding agents:
 
-1. `rea extract-artifact`: extrai o `.xapk` (APK base e o split `armeabi-v7a`).
-2. `rea identify-flutter-build`: o app é **Flutter**, então a lógica fica em Dart AOT (`libapp.so`).
-3. `rea inspect-dart-aot`: lê o pool de strings do snapshot Dart (módulos `air_conditioner`, `gigya_flutter_plugin`, `RSASigner`…).
-4. Varredura do `libapp.so` extraído para confirmar endpoints, campos da assinatura e nomes de propriedades.
+1. `rea extract-artifact` unpacks the `.xapk` into the base APK and the `armeabi-v7a` split.
+2. `rea identify-flutter-build` shows the app is **Flutter**, so the logic lives in Dart AOT code (`libapp.so`).
+3. `rea inspect-dart-aot` reads the Dart snapshot's string pool. It contains the `air_conditioner` and `gigya_flutter_plugin` modules, a `RSASigner` class, and more.
+4. A full scan of the extracted `libapp.so` confirms the endpoints, the signature fields and the property names.
 
-O que foi confirmado, o que ficou diferente (o `appId` do app oficial, por exemplo) e o que não deu para extrair (`appSecret` e chave RSA, que estão ofuscados) está em [**REA-FINDINGS.md**](REA-FINDINGS.md).
+[**REA-FINDINGS.md**](REA-FINDINGS.md) lists what was confirmed, what differs from the reference library (the official `appId`, for example) and what couldn't be extracted (the `appSecret` and RSA key are obfuscated). That file is written in Portuguese.
 
-## Estrutura
+## Project layout
 
 ```
 Sources/ArCondicionado/
-├── ConnectLifeAPI.swift   # login Gigya → OAuth → gateway assinado (SHA256 + RSA)
-├── ACStore.swift          # estado, comandos otimistas, timer, Keychain
-├── Views.swift            # painel: dial, modos, ventilação, chips, timer
-├── Effects.swift          # vidro, shader Metal do fluxo de ar, split, háptico
+├── ConnectLifeAPI.swift   # Gigya login → OAuth → signed gateway (SHA256 + RSA)
+├── ACStore.swift          # state, optimistic commands, timer, Keychain
+├── Views.swift            # panel: dial, modes, fan speed, chips, timer
+├── Effects.swift          # glass, Metal airflow shader, split unit, haptics
 └── App.swift              # MenuBarExtra
-Snapshot/                  # gera as imagens do README com dados fictícios
-build-app.sh               # compila e empacota o .app
-snapshot.sh                # ./snapshot.sh → docs/*.png
+Resources/*.lproj/         # translations (en, pt-BR)
+Snapshot/                  # renders the README images from mock data
+build-app.sh               # builds and packages the .app
+snapshot.sh                # ./snapshot.sh → docs/*.png (en) and docs/pt-BR/*.png
 ```
 
-O shader Metal é compilado quando o app abre (`makeLibrary(source:)`), por isso o projeto compila só com as Command Line Tools.
+The Metal shader is compiled when the app launches (`makeLibrary(source:)`), so the project builds with just the Command Line Tools.
 
-## Limitações
+## Limitations
 
-- **Timer local**: o timer roda no Mac. Enquanto ele está ativo, o Mac não dorme por inatividade, mas se a tampa for fechada o ar só desliga quando o Mac acordar. O app oficial agenda pela nuvem (`/energy-service/api/device/saveScheduler`), mas o formato desse payload ainda não foi mapeado.
-- **Testado** com um split Hisense numa conta do Brasil. Outros modelos podem expor propriedades diferentes. As funções extras só aparecem quando o aparelho as informa.
-- **Não-oficial**: a nuvem pode mudar a qualquer momento e quebrar o app.
+- **The timer runs on the Mac.** While it's armed, the Mac won't idle-sleep. If you close the lid, though, the AC only turns off once the Mac wakes up again. The official app schedules in the cloud (`/energy-service/api/device/saveScheduler`), but that payload hasn't been mapped yet.
+- **Tested** with one Hisense split unit on a Brazilian account. Other models may expose different properties. The extra functions only appear when your unit reports them.
+- **Unofficial.** The cloud API can change at any time and break the app.
 
-## Créditos
+## Credits
 
-- [oyvindwe/connectlife](https://github.com/oyvindwe/connectlife), cliente Python open source da nuvem ConnectLife. As credenciais de cliente e o algoritmo de assinatura deste projeto seguem a implementação dele.
-- [morluto/rea](https://github.com/morluto/rea), usado para verificar o protocolo no app oficial.
+- [oyvindwe/connectlife](https://github.com/oyvindwe/connectlife), an open-source Python client for the ConnectLife cloud. This project uses the same client credentials and signing algorithm.
+- [morluto/rea](https://github.com/morluto/rea), used to verify the protocol against the official app.
 
-## Aviso
+## Disclaimer
 
-Projeto pessoal, **não afiliado** à Hisense nem à ConnectLife. Use por sua conta e risco. A senha da ConnectLife fica só no Keychain do seu Mac e é enviada apenas aos servidores de login da própria ConnectLife (Gigya).
+This is a personal project and is **not affiliated** with Hisense or ConnectLife. Use it at your own risk. Your ConnectLife password stays in your Mac's Keychain and is only sent to ConnectLife's own sign-in servers (Gigya).
 
-## Licença
+## License
 
 [GPL-3.0](LICENSE)
