@@ -13,7 +13,7 @@ enum ConnectLifeError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .auth(let m): return "Login: \(m)"
+        case .auth(let m): return String(localized: "Login: \(m)")
         case .gateway(let m): return m
         case .http(let s): return "HTTP \(s)"
         }
@@ -133,11 +133,11 @@ actor ConnectLifeAPI {
         let login = try await formPost(loginURL, ["loginID": email, "password": password, "APIKey": gigyaKey])
         if let code = login["errorCode"] as? Int, code != 0 {
             let msg = login["errorDetails"] as? String ?? login["errorMessage"] as? String ?? "erro \(code)"
-            throw ConnectLifeError.auth(code == 206001 ? "aceite os novos termos no app ConnectLife" : msg)
+            throw ConnectLifeError.auth(code == 206001 ? String(localized: "aceite os novos termos no app ConnectLife") : msg)
         }
         guard let uid = login["UID"] as? String,
               let cookie = (login["sessionInfo"] as? [String: Any])?["cookieValue"] as? String else {
-            throw ConnectLifeError.auth("resposta inesperada do Gigya")
+            throw ConnectLifeError.auth(String(localized: "resposta inesperada do Gigya"))
         }
         // 2. JWT
         let jwt = try await formPost(jwtURL, ["APIKey": gigyaKey, "login_token": cookie])
@@ -198,7 +198,7 @@ actor ConnectLifeAPI {
         }
         let body = try await send(req)
         guard let resp = body["response"] as? [String: Any] else {
-            throw ConnectLifeError.gateway("Resposta inesperada do gateway")
+            throw ConnectLifeError.gateway(String(localized: "Resposta inesperada do gateway"))
         }
         if "\(resp["resultCode"] ?? 0)" == "0" { return resp }
         let err = "\(resp["errorCode"] ?? "")"
@@ -225,7 +225,7 @@ actor ConnectLifeAPI {
         let digest = Data(SHA256.hash(data: Data((parts.joined(separator: "&") + signSuffix).utf8)))
         var err: Unmanaged<CFError>?
         guard let enc = SecKeyCreateEncryptedData(try publicKey(), .rsaEncryptionPKCS1, digest as CFData, &err) else {
-            throw ConnectLifeError.gateway("Falha ao assinar requisição")
+            throw ConnectLifeError.gateway(String(localized: "Falha ao assinar requisição"))
         }
         return (enc as Data).base64EncodedString()
     }
@@ -241,7 +241,7 @@ actor ConnectLifeAPI {
             kSecAttrKeySizeInBits: 2048,
         ]
         guard let key = SecKeyCreateWithData(der as CFData, attrs as CFDictionary, nil) else {
-            throw ConnectLifeError.gateway("Chave pública inválida")
+            throw ConnectLifeError.gateway(String(localized: "Chave pública inválida"))
         }
         cachedKey = key
         return key
@@ -269,7 +269,7 @@ actor ConnectLifeAPI {
             throw ConnectLifeError.http(http.statusCode)
         }
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw ConnectLifeError.gateway("Resposta não-JSON")
+            throw ConnectLifeError.gateway(String(localized: "Resposta não-JSON"))
         }
         return json
     }

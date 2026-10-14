@@ -10,11 +10,11 @@ enum Mode: Int, CaseIterable {
 
     var label: String {
         switch self {
-        case .fan: "Ventilar"
-        case .heat: "Aquecer"
-        case .cool: "Resfriar"
-        case .dry: "Desumidificar"
-        case .auto: "Automático"
+        case .fan: String(localized: "Ventilar")
+        case .heat: String(localized: "Aquecer")
+        case .cool: String(localized: "Resfriar")
+        case .dry: String(localized: "Desumidificar")
+        case .auto: String(localized: "Automático")
         }
     }
     var icon: String {
@@ -33,12 +33,12 @@ enum FanSpeed: Int, CaseIterable {
 
     var label: String {
         switch self {
-        case .auto: "Auto"
-        case .low: "Baixa"
-        case .midLow: "Média-baixa"
-        case .medium: "Média"
-        case .midHigh: "Média-alta"
-        case .high: "Alta"
+        case .auto: String(localized: "Auto")
+        case .low: String(localized: "Baixa")
+        case .midLow: String(localized: "Média-baixa")
+        case .medium: String(localized: "Média")
+        case .midHigh: String(localized: "Média-alta")
+        case .high: String(localized: "Alta")
         }
     }
 }
@@ -70,7 +70,7 @@ final class ACStore: ObservableObject {
     /// Store com dados fictícios, usado só pra gerar snapshots da interface.
     init(preview status: [String: Int]) {
         loggedIn = true
-        devices = [Appliance(id: "preview", puid: "preview", name: "Split", room: "Quarto",
+        devices = [Appliance(id: "preview", puid: "preview", name: "Split", room: String(localized: "Quarto"),
                              typeCode: "009", featureCode: "", offline: false, status: status)]
         lastUpdate = Date()
         isPreview = true
@@ -288,10 +288,12 @@ extension ACStore {
         Task {
             do {
                 try await api.set(puid: target.puid, properties: ["t_power": 0])
-                notify("Ar desligado pelo timer", "\(target.room.isEmpty ? target.name : target.room) foi desligado.")
+                notify(String(localized: "Ar desligado pelo timer"),
+                       String(localized: "\(target.room.isEmpty ? target.name : target.room) foi desligado."))
             } catch {
                 self.error = error.localizedDescription
-                notify("Falha no timer", "Não consegui desligar o ar: \(error.localizedDescription)")
+                notify(String(localized: "Falha no timer"),
+                       String(localized: "Não consegui desligar o ar: \(error.localizedDescription)"))
             }
             await refresh()
         }

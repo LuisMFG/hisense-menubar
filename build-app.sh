@@ -7,6 +7,8 @@ APP="build/Ar Condicionado.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 cp .build/release/ArCondicionado "$APP/Contents/MacOS/"
+mkdir -p "$APP/Contents/Resources"
+cp -R Resources/*.lproj "$APP/Contents/Resources/"
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -15,6 +17,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIdentifier</key><string>dev.local.ArCondicionado</string>
   <key>CFBundleExecutable</key><string>ArCondicionado</string>
   <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>CFBundleLocalizations</key><array><string>en</string><string>pt-BR</string></array>
   <key>CFBundleShortVersionString</key><string>1.0</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSUIElement</key><true/>

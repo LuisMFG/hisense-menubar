@@ -16,20 +16,20 @@ extension Mode {
     }
     var activeLabel: String {
         switch self {
-        case .cool: "Resfriando"
-        case .heat: "Aquecendo"
-        case .dry: "Desumidificando"
-        case .fan: "Ventilando"
-        case .auto: "Automático"
+        case .cool: String(localized: "Resfriando")
+        case .heat: String(localized: "Aquecendo")
+        case .dry: String(localized: "Desumidificando")
+        case .fan: String(localized: "Ventilando")
+        case .auto: String(localized: "Automático")
         }
     }
     var shortLabel: String {
         switch self {
-        case .cool: "Frio"
-        case .heat: "Calor"
-        case .dry: "Seco"
-        case .fan: "Vento"
-        case .auto: "Auto"
+        case .cool: String(localized: "Frio")
+        case .heat: String(localized: "Calor")
+        case .dry: String(localized: "Seco")
+        case .fan: String(localized: "Vento")
+        case .auto: String(localized: "Auto")
         }
     }
 }
@@ -97,7 +97,7 @@ struct ControlView: View {
             if store.device == nil {
                 VStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text(store.error ?? "Buscando aparelhos…")
+                    Text(store.error ?? String(localized: "Buscando aparelhos…"))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, minHeight: 260)
@@ -136,7 +136,7 @@ struct ControlView: View {
     }
 
     private var title: String {
-        guard let d = store.device else { return "Ar-condicionado" }
+        guard let d = store.device else { return String(localized: "Ar-condicionado") }
         return d.room.isEmpty ? d.name : d.room
     }
 
@@ -156,7 +156,7 @@ struct ControlView: View {
                 }
                 HStack(spacing: 5) {
                     Circle().fill(store.isOn ? tint : Color.white.opacity(0.25)).frame(width: 6, height: 6)
-                    Text(store.isOn ? store.mode.activeLabel : "Desligado")
+                    Text(store.isOn ? store.mode.activeLabel : String(localized: "Desligado"))
                 }
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.secondary)
@@ -170,10 +170,10 @@ struct ControlView: View {
     /// Chips para funções extras, mostrados só quando o modelo reporta a propriedade.
     @ViewBuilder private var extras: some View {
         let chips: [(key: String, icon: String, label: String)] = [
-            ("t_super", "bolt.fill", "Turbo"),
-            ("t_up_down", "arrow.up.and.down", "Swing"),
-            ("t_eco", "leaf.fill", "Eco"),
-            ("t_sleep", "moon.fill", "Sono"),
+            ("t_super", "bolt.fill", String(localized: "Turbo")),
+            ("t_up_down", "arrow.up.and.down", String(localized: "Swing")),
+            ("t_eco", "leaf.fill", String(localized: "Eco")),
+            ("t_sleep", "moon.fill", String(localized: "Sono")),
         ].filter { store.has($0.key) }
         if !chips.isEmpty {
             HStack(spacing: 6) {
@@ -379,7 +379,7 @@ private struct PowerButton: View {
         }
         .buttonStyle(.plain)
         .keyboardShortcut(.space, modifiers: [])
-        .help(on ? "Desligar" : "Ligar")
+        .help(on ? String(localized: "Desligar") : String(localized: "Ligar"))
     }
 }
 

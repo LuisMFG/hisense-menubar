@@ -1,0 +1,70 @@
+/* Chaves = textos em português usados no código; valores = inglês. */
+
+/* Modos */
+"Resfriar" = "Cool";
+"Aquecer" = "Heat";
+"Desumidificar" = "Dry";
+"Ventilar" = "Fan";
+"Automático" = "Auto";
+"Resfriando" = "Cooling";
+"Aquecendo" = "Heating";
+"Desumidificando" = "Drying";
+"Ventilando" = "Fan only";
+"Frio" = "Cool";
+"Calor" = "Heat";
+"Seco" = "Dry";
+"Vento" = "Fan";
+"Auto" = "Auto";
+
+/* Ventilação */
+"Baixa" = "Low";
+"Média-baixa" = "Med-low";
+"Média" = "Medium";
+"Média-alta" = "Med-high";
+"Alta" = "High";
+"AUTO" = "AUTO";
+
+/* Painel */
+"Quarto" = "Bedroom";
+"Ar-condicionado" = "Air conditioner";
+"Buscando aparelhos…" = "Looking for devices…";
+"Desligado" = "Off";
+"Desligar" = "Turn off";
+"Ligar" = "Turn on";
+"ALVO" = "TARGET";
+"%lld° agora" = "%lld° now";
+"Turbo" = "Turbo";
+"Swing" = "Swing";
+"Eco" = "Eco";
+"Sono" = "Sleep";
+"Atualizado %@" = "Updated %@";
+"Sair da conta" = "Sign out";
+"Fechar app" = "Quit";
+
+/* Timer */
+"Desligar em" = "Turn off in";
+"Desligar o ar daqui a %@" = "Turn the AC off in %@";
+"Desliga às %@" = "Turns off at %@";
+"Adiar 30 minutos" = "Postpone 30 minutes";
+"Cancelar timer" = "Cancel timer";
+"Ar desligado pelo timer" = "AC turned off by timer";
+"%@ foi desligado." = "%@ was turned off.";
+"Falha no timer" = "Timer failed";
+"Não consegui desligar o ar: %@" = "Couldn't turn the AC off: %@";
+
+/* Login */
+"Entrar na ConnectLife" = "Sign in to ConnectLife";
+"A senha fica só no Keychain deste Mac." = "Your password stays in this Mac's Keychain.";
+"E-mail" = "Email";
+"Senha" = "Password";
+"Fechar" = "Quit";
+"Entrar" = "Sign in";
+
+/* Erros */
+"Login: %@" = "Sign-in: %@";
+"aceite os novos termos no app ConnectLife" = "accept the new terms in the ConnectLife app";
+"resposta inesperada do Gigya" = "unexpected response from Gigya";
+"Resposta inesperada do gateway" = "Unexpected response from the gateway";
+"Falha ao assinar requisição" = "Failed to sign request";
+"Chave pública inválida" = "Invalid public key";
+"Resposta não-JSON" = "Non-JSON response";
